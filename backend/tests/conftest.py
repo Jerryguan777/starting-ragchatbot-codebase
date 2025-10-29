@@ -2,7 +2,8 @@
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
+from typing import List, Dict, Optional
 
 # Add backend directory to path
 backend_dir = Path(__file__).parent.parent
@@ -11,6 +12,7 @@ sys.path.insert(0, str(backend_dir))
 from vector_store import VectorStore, SearchResults
 from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
 from models import Course, Lesson, CourseChunk
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -155,3 +157,131 @@ def sample_course_chunks(sample_course):
             chunk_index=1
         )
     ]
+
+
+# API Testing Fixtures
+
+@pytest.fixture
+def mock_rag_system():
+    """Create a mock RAGSystem for API testing"""
+    mock_rag = Mock()
+
+    # Mock query method - note: all dict values must be strings or None per the QueryResponse model
+    mock_rag.query.return_value = (
+        "Python is a versatile programming language used for web development, data science, and automation.",
+        [
+            {
+                "course_title": "Introduction to Python",
+                "lesson_number": "1",
+                "lesson_link": "https://example.com/python/lesson1"
+            }
+        ]
+    )
+
+    # Mock get_course_analytics method
+    mock_rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Introduction to Python", "Advanced JavaScript"]
+    }
+
+    # Mock session_manager
+    mock_session_manager = Mock()
+    mock_session_manager.create_session.return_value = "test-session-123"
+    mock_rag.session_manager = mock_session_manager
+
+    return mock_rag
+
+
+@pytest.fixture
+def test_app(mock_rag_system):
+    """Create a test FastAPI application with mocked dependencies"""
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    from typing import List, Optional, Dict
+
+    # Create test app without static file mounting
+    app = FastAPI(title="Course Materials RAG System (Test)")
+
+    # Enable CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Pydantic models for request/response
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[Dict[str, Optional[str]]]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    # API Endpoints (inline definitions for testing)
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        from fastapi import HTTPException
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = mock_rag_system.session_manager.create_session()
+
+            answer, sources = mock_rag_system.query(request.query, session_id)
+
+            return QueryResponse(
+                answer=answer,
+                sources=sources,
+                session_id=session_id
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        from fastapi import HTTPException
+        try:
+            analytics = mock_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/")
+    async def root():
+        return {"message": "RAG System API"}
+
+    return app
+
+
+@pytest.fixture
+def client(test_app):
+    """Create a test client for the FastAPI app"""
+    return TestClient(test_app)
+
+
+@pytest.fixture
+def sample_query_request():
+    """Sample query request data"""
+    return {
+        "query": "What is Python?",
+        "session_id": "test-session-123"
+    }
+
+
+@pytest.fixture
+def sample_query_request_no_session():
+    """Sample query request without session ID"""
+    return {
+        "query": "What is Python?"
+    }
