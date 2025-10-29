@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,8 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    themeToggle = document.getElementById('themeToggle');
+
     setupEventListeners();
+    initializeTheme();
     createNewSession();
     loadCourseStats();
 });
@@ -43,6 +45,18 @@ function setupEventListeners() {
             sendMessage();
         });
     });
+
+    // Theme toggle button
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+        // Keyboard navigation support
+        themeToggle.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+    }
 }
 
 
@@ -217,5 +231,48 @@ async function loadCourseStats() {
         if (courseTitles) {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
+    }
+}
+
+// Theme Management Functions
+function initializeTheme() {
+    // Check for saved theme preference or default to dark theme
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // If no saved preference, use system preference (defaults to dark)
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+
+    if (initialTheme === 'light') {
+        document.documentElement.classList.add('light-theme');
+        updateThemeToggleLabel('light');
+    } else {
+        document.documentElement.classList.remove('light-theme');
+        updateThemeToggleLabel('dark');
+    }
+}
+
+function toggleTheme() {
+    const root = document.documentElement;
+    const isLightTheme = root.classList.contains('light-theme');
+
+    if (isLightTheme) {
+        // Switch to dark theme
+        root.classList.remove('light-theme');
+        localStorage.setItem('theme', 'dark');
+        updateThemeToggleLabel('dark');
+    } else {
+        // Switch to light theme
+        root.classList.add('light-theme');
+        localStorage.setItem('theme', 'light');
+        updateThemeToggleLabel('light');
+    }
+}
+
+function updateThemeToggleLabel(theme) {
+    if (themeToggle) {
+        const label = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+        themeToggle.setAttribute('aria-label', label);
+        themeToggle.setAttribute('title', label);
     }
 }
