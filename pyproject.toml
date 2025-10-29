@@ -13,6 +13,28 @@ dependencies = [
     "python-multipart==0.0.20",
     "python-dotenv==1.1.1",
     "pytest>=8.4.2",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "-ra",
+]
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests for multiple components",
+    "api: API endpoint tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
 ]
 
 [dependency-groups]
