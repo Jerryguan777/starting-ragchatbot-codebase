@@ -28,8 +28,13 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
+    // New chat button
+    const newChatButton = document.getElementById('newChatButton');
+    if (newChatButton) {
+        newChatButton.addEventListener('click', handleNewChat);
+    }
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -115,25 +120,45 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}${isWelcome ? ' welcome-message' : ''}`;
     messageDiv.id = `message-${messageId}`;
-    
+
     // Convert markdown to HTML for assistant messages
     const displayContent = type === 'assistant' ? marked.parse(content) : escapeHtml(content);
-    
+
     let html = `<div class="message-content">${displayContent}</div>`;
-    
+
     if (sources && sources.length > 0) {
+        // Format sources as clickable links, each on a separate line
+        const formattedSources = sources.map(source => {
+            // Handle both new format (objects) and old format (strings) for backward compatibility
+            if (typeof source === 'object' && source !== null) {
+                const title = escapeHtml(source.title || 'Unknown Source');
+                const url = source.url;
+
+                if (url) {
+                    // Create clickable link that opens in new tab
+                    return `<div class="source-item"><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="source-link">${title}</a></div>`;
+                } else {
+                    // No URL available, display as plain text
+                    return `<div class="source-item">${title}</div>`;
+                }
+            } else {
+                // Old format: plain string
+                return `<div class="source-item">${escapeHtml(source)}</div>`;
+            }
+        }).join('');
+
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${formattedSources}</div>
             </details>
         `;
     }
-    
+
     messageDiv.innerHTML = html;
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    
+
     return messageId;
 }
 
@@ -150,6 +175,11 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+function handleNewChat() {
+    createNewSession();
+    chatInput.focus();
 }
 
 // Load course statistics

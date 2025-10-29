@@ -245,6 +245,36 @@ header h1 {
     color: var(--text-secondary);
 }
 
+.source-item {
+    margin-bottom: 0.3rem;
+    line-height: 1.5;
+}
+
+.source-item:last-child {
+    margin-bottom: 0;
+}
+
+.source-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.source-link:hover {
+    color: var(--primary-hover);
+    border-bottom-color: var(--primary-hover);
+}
+
+.source-link:visited {
+    color: #7c3aed;
+}
+
+.source-link:visited:hover {
+    color: #6d28d9;
+    border-bottom-color: #6d28d9;
+}
+
 /* Markdown formatting styles */
 .message-content h1,
 .message-content h2,
@@ -632,6 +662,31 @@ details[open] .suggested-header::before {
     border-color: var(--primary-color);
     color: var(--primary-color);
     transform: translateX(2px);
+}
+
+/* New Chat Button */
+.new-chat-button {
+    width: 100%;
+    padding: 0.5rem 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.new-chat-button:focus {
+    outline: none;
+    color: var(--primary-color);
+}
+
+.new-chat-button:hover {
+    color: var(--primary-color);
 }
 
 /* Responsive Design */
